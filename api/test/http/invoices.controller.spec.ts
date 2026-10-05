@@ -35,15 +35,13 @@ describe('InvoicesController', () => {
     }),
   };
   const pdfImporter = {
-    importPdf: jest
-      .fn()
-      .mockResolvedValue({
-        results: [],
-        imported: 0,
-        reconciled: 0,
-        updated: 0,
-        errors: 0,
-      }),
+    importPdf: jest.fn().mockResolvedValue({
+      results: [],
+      imported: 0,
+      reconciled: 0,
+      updated: 0,
+      errors: 0,
+    }),
   };
 
   beforeAll(async () => {
