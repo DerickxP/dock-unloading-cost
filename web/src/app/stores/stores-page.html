@@ -1,0 +1,112 @@
+<div class="two-cols">
+  <section class="card">
+    <div class="row between">
+      <h1>Lojas</h1>
+      <div class="row">
+        <input
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          (keyup.enter)="load()"
+          placeholder="apelido ou CNPJ"
+        />
+        <button (click)="load()">Buscar</button>
+      </div>
+    </div>
+    @if (loading()) {
+      <div class="empty">Carregando…</div>
+    } @else if (stores().length === 0) {
+      <div class="empty">Nenhuma loja cadastrada. O apelido é o nome que aparece no relatório de descarga.</div>
+    } @else {
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Apelido</th>
+            <th>CNPJ</th>
+            <th>Atualizado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of stores(); track s.id) {
+            <tr>
+              <td>
+                <strong>{{ s.nickname }}</strong>
+              </td>
+              <td class="mono">{{ s.cnpjFormatted }}</td>
+              <td class="muted nowrap">{{ when(s.updatedAt) }}</td>
+              <td class="right nowrap">
+                <button class="small" [disabled]="!settings.isAdmin" (click)="rename(s)">renomear</button>
+                <button class="small danger" [disabled]="!settings.isAdmin" (click)="remove(s)">remover</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+
+  <div class="stack">
+    <section class="card">
+      <h2>Cadastrar ou renomear</h2>
+      @if (!settings.isAdmin) {
+        <div class="alert">Exige a chave de administração (ícone no topo).</div>
+      }
+      <label class="field">
+        CNPJ
+        <input [ngModel]="form().cnpj" (ngModelChange)="setForm('cnpj', $event)" placeholder="00.000.000/0000-00" />
+      </label>
+      <label class="field">
+        Apelido (como aparece no relatório)
+        <input
+          id="store-nickname"
+          [ngModel]="form().nickname"
+          (ngModelChange)="setForm('nickname', $event)"
+          maxlength="60"
+          placeholder="ex.: Loja Centro"
+        />
+      </label>
+      <div class="row" style="justify-content: flex-end; margin-top: 0.6rem">
+        <button
+          class="primary"
+          [disabled]="!settings.isAdmin || saving() || !form().cnpj || !form().nickname"
+          (click)="save()"
+        >
+          Salvar
+        </button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Destinatários sem apelido</h2>
+      <p class="muted">
+        CNPJs que já apareceram em notas e ainda não têm rótulo; entram no fechamento pela razão social.
+      </p>
+      @if (unregistered().length === 0) {
+        <div class="empty">Todos os destinatários têm apelido.</div>
+      } @else {
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Razão social na nota</th>
+              <th>CNPJ</th>
+              <th class="num">Notas</th>
+              <th>Última</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of unregistered(); track u.cnpj) {
+              <tr>
+                <td>{{ u.name }}</td>
+                <td class="mono">{{ u.cnpjFormatted }}</td>
+                <td class="num">{{ u.invoices }}</td>
+                <td class="nowrap">{{ date(u.lastIssueDate) }}</td>
+                <td class="right"><button class="small" (click)="prefill(u)">cadastrar</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  </div>
+</div>

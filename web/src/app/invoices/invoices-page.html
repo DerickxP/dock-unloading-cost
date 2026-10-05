@@ -1,0 +1,221 @@
+<section class="card">
+  <div class="row between">
+    <h1>Notas recebidas</h1>
+    <div class="row">
+      <app-file-button
+        accept=".xml,text/xml,application/xml"
+        [multiple]="true"
+        [disabled]="busy()"
+        (files)="importXml($event)"
+      >
+        ⬆ Importar XML
+      </app-file-button>
+      <app-file-button accept=".pdf,application/pdf" [multiple]="true" [disabled]="busy()" (files)="importPdf($event)">
+        ⬆ Importar PDF (DANFE)
+      </app-file-button>
+      <button (click)="newManual()">＋ Nota do DANFE</button>
+    </div>
+  </div>
+
+  <div class="row filters">
+    <label class="field">
+      Emissão de
+      <input type="date" [ngModel]="filters().from ?? ''" (ngModelChange)="setFilter('from', $event)" />
+    </label>
+    <label class="field">
+      até
+      <input type="date" [ngModel]="filters().to ?? ''" (ngModelChange)="setFilter('to', $event)" />
+    </label>
+    <label class="field">
+      Nº da nota (vários, separados por vírgula)
+      <input
+        [ngModel]="filters().number ?? ''"
+        (ngModelChange)="setFilter('number', $event)"
+        placeholder="1001, 1002"
+      />
+    </label>
+    <label class="field">
+      CNPJ da loja
+      <input [ngModel]="filters().recipientCnpj ?? ''" (ngModelChange)="setFilter('recipientCnpj', $event)" />
+    </label>
+    <label class="field">
+      Origem
+      <select [ngModel]="filters().source ?? ''" (ngModelChange)="setFilter('source', $event)">
+        <option value="">todas</option>
+        <option value="upload">XML</option>
+        <option value="manual">DANFE</option>
+        <option value="ingestion">Ingestão</option>
+      </select>
+    </label>
+    <label class="field">
+      Situação
+      <select [ngModel]="filters().status ?? ''" (ngModelChange)="setFilter('status', $event)">
+        <option value="">ativas</option>
+        <option value="pending">pendente</option>
+        <option value="confirmed">confirmada</option>
+        <option value="reconciled">reconciliada</option>
+        <option value="discarded">descartada</option>
+      </select>
+    </label>
+    <label class="check">
+      <input
+        type="checkbox"
+        [ngModel]="filters().mismatchOnly ?? false"
+        (ngModelChange)="setFilter('mismatchOnly', $event || undefined)"
+      />
+      só divergentes
+    </label>
+    <button class="primary" (click)="applyFilters()">Filtrar</button>
+    <button (click)="clearFilters()">Limpar</button>
+  </div>
+</section>
+
+<section class="card table-card">
+  @if (loading()) {
+    <div class="empty">Carregando…</div>
+  } @else if (page().items.length === 0) {
+    <div class="empty">Nenhuma nota com esses filtros. Importe XMLs ou registre a nota do DANFE.</div>
+  } @else {
+    <table class="data">
+      <thead>
+        <tr>
+          <th>
+            <input
+              type="checkbox"
+              [checked]="allOnPageSelected()"
+              (change)="toggleAllOnPage()"
+              title="Selecionar a página"
+            />
+          </th>
+          <th class="sortable" (click)="sortBy('number')">Nº{{ sortMark('number') }}</th>
+          <th class="sortable" (click)="sortBy('issueDate')">Emissão{{ sortMark('issueDate') }}</th>
+          <th class="sortable" (click)="sortBy('issuer')">Fornecedor{{ sortMark('issuer') }}</th>
+          <th class="sortable" (click)="sortBy('store')">Loja{{ sortMark('store') }}</th>
+          <th class="num sortable" (click)="sortBy('volumes')">Volumes{{ sortMark('volumes') }}</th>
+          <th>Espécie</th>
+          <th class="num sortable" (click)="sortBy('weight')">Peso p/ descarga (kg){{ sortMark('weight') }}</th>
+          <th class="num sortable" (click)="sortBy('totalValue')">Valor NF{{ sortMark('totalValue') }}</th>
+          <th>Origem</th>
+          <th>Situação</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (i of page().items; track i.accessKey) {
+          <tr class="clickable" (click)="openDetail(i)">
+            <td (click)="$event.stopPropagation()">
+              <input type="checkbox" [checked]="isSelected(i.accessKey)" (change)="toggle(i.accessKey)" />
+            </td>
+            <td class="mono">{{ i.number }}</td>
+            <td class="nowrap">{{ date(i.issueDate) }}</td>
+            <td>{{ i.issuerName }}</td>
+            <td>
+              {{ i.storeLabel }}
+              @if (!i.storeRegistered) {
+                <span class="badge warn" title="Destinatário sem apelido cadastrado">sem apelido</span>
+              }
+            </td>
+            <td
+              class="num"
+              [class.warn-text]="i.volumeMismatch"
+              [title]="i.volumeMismatch ? 'Transportadora: ' + i.carrierVolumes + ' · itens: ' + i.itemVolumes : ''"
+            >
+              {{ vol(i) }}
+            </td>
+            <td>{{ i.species }}</td>
+            <td class="num">{{ num(i.unloadWeight, 3) }}</td>
+            <td class="num">{{ brl(i.totalValue) }}</td>
+            <td>
+              <span class="badge">{{ sourceLabel(i.source) }}</span>
+            </td>
+            <td>
+              <span
+                class="badge"
+                [class.warn]="i.status === 'pending'"
+                [class.ok]="i.status === 'reconciled'"
+                [class.danger]="i.status === 'discarded'"
+              >
+                {{ statusLabel(i.status) }}
+              </span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <app-pager [page]="page().page" [perPage]="page().perPage" [total]="page().total" (pageChange)="load($event)" />
+  }
+</section>
+
+<section class="card compute-bar">
+  <div class="row between">
+    <div class="row">
+      <strong>{{ selectedCount() }}</strong>
+      <span class="muted">nota(s) selecionada(s)</span>
+      @if (selectedCount() > 0) {
+        <button class="small" (click)="clearSelection()">limpar</button>
+      }
+    </div>
+    <div class="row">
+      <label class="field">
+        Cobrança
+        <select [ngModel]="method()" (ngModelChange)="method.set($event)">
+          <option value="volume">por volume</option>
+          <option value="weight">por peso (kg)</option>
+        </select>
+      </label>
+      <label class="field">
+        {{ method() === 'weight' ? 'R$ por kg' : 'R$ por volume' }}
+        <input
+          [ngModel]="unitPrice()"
+          (ngModelChange)="unitPrice.set($event)"
+          inputmode="decimal"
+          style="width: 7rem"
+        />
+      </label>
+      <button class="primary" [disabled]="!canCompute() || busy()" (click)="compute()">Calcular descarga</button>
+      <button [disabled]="!canCompute() || busy()" (click)="exportXlsx()">⬇ Planilha .xlsx</button>
+    </div>
+  </div>
+</section>
+
+<app-dialog #resultDialog title="Descarga por loja">
+  @if (result(); as r) {
+    <app-unloading-result [result]="r" />
+  }
+  <div footer>
+    <button (click)="resultDialog.close()">Fechar</button>
+    <button class="primary" [disabled]="busy()" (click)="exportXlsx()">⬇ Exportar a mesma conta em .xlsx</button>
+  </div>
+</app-dialog>
+
+<app-dialog #reportDialog title="Relato da importação">
+  @if (report(); as r) {
+    <app-import-report [report]="r" />
+  }
+  <div footer><button class="primary" (click)="reportDialog.close()">Fechar</button></div>
+</app-dialog>
+
+<app-dialog #detailDialog title="Nota fiscal">
+  @if (detail(); as d) {
+    <app-invoice-detail [invoice]="d" />
+  }
+  <div footer>
+    @if (detail(); as d) {
+      @if (d.source === 'manual' && d.status === 'pending') {
+        <button (click)="editManual(d)">Corrigir</button>
+        <button
+          class="danger"
+          [disabled]="!settings.isAdmin"
+          [title]="settings.isAdmin ? '' : 'Exige a chave de administração'"
+          (click)="discard(d)"
+        >
+          Descartar
+        </button>
+      }
+    }
+    <button class="primary" (click)="detailDialog.close()">Fechar</button>
+  </div>
+</app-dialog>
+
+<app-dialog #manualDialog [title]="editing() ? 'Corrigir nota do DANFE' : 'Registrar nota pelo DANFE'">
+  <app-manual-invoice-form [editing]="editing()" (saved)="onManualSaved()" (cancelled)="manualDialog.close()" />
+</app-dialog>

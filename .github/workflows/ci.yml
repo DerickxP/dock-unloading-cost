@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
+    env:
+      # `prisma generate` não conecta; a URL só precisa existir.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci --no-fund --no-audit
+
+      - name: Gerar o Prisma Client
+        run: npx prisma generate
+
+      - name: Lint (eslint) e formatação (prettier)
+        run: npm run lint && npx prettier --check "{src,test}/**/*.ts"
+
+      - name: Tipos (tsc)
+        run: npm run typecheck
+
+      - name: Testes (jest)
+        run: npm test
+
+      - name: Build (nest)
+        run: npm run build
+
+      - name: Smoke test da demonstração ponta a ponta
+        run: node dist/demo/main.js --out /tmp/demo
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci --no-fund --no-audit
+
+      - name: Formatação (prettier)
+        run: npx prettier --check "src/**/*.{ts,html,css}"
+
+      - name: Testes (vitest)
+        run: npx ng test --watch=false
+
+      - name: Build (ng)
+        run: npm run build

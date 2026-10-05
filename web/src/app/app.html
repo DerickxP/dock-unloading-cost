@@ -1,0 +1,53 @@
+<header class="topbar">
+  <div class="brand">
+    <span class="logo"><app-logo [size]="22" /></span>
+    <div>
+      <div class="name">Descarga CD</div>
+      <div class="sub">custo de descarga de NF-e por loja</div>
+    </div>
+  </div>
+  <nav>
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Notas</a>
+    <a routerLink="/lojas" routerLinkActive="active">Lojas</a>
+    <a routerLink="/produtos" routerLinkActive="active">Produtos</a>
+  </nav>
+  <button class="who" (click)="openSettings()" title="Operador e chave de administração">
+    <span>{{ settings.operator() || 'operador não informado' }}</span>
+    @if (settings.isAdmin) {
+      <span class="badge info">admin</span>
+    } @else {
+      <span class="badge">leitura</span>
+    }
+  </button>
+</header>
+
+<main>
+  <router-outlet />
+</main>
+
+<app-dialog #settingsDialog title="Configurações desta sessão">
+  <p class="muted">
+    Sem SSO, a identidade vai por cabeçalho: o operador fica registrado nas notas e no rodapé da planilha; a chave de
+    administração libera cadastro de produtos e lojas, importação de planilha e descarte de nota.
+  </p>
+  <div class="row">
+    <label class="field grow">
+      Operador (nome ou e-mail)
+      <input [ngModel]="operatorDraft()" (ngModelChange)="operatorDraft.set($event)" placeholder="ex.: doca-01" />
+    </label>
+    <label class="field grow">
+      Chave de administração (ADMIN_API_KEY)
+      <input type="password" [ngModel]="adminKeyDraft()" (ngModelChange)="adminKeyDraft.set($event)" />
+    </label>
+  </div>
+  <div footer>
+    <button (click)="settingsDialog.close()">Cancelar</button>
+    <button class="primary" (click)="saveSettings()">Salvar</button>
+  </div>
+</app-dialog>
+
+<div class="toasts" aria-live="polite">
+  @for (t of toasts.toasts(); track t.id) {
+    <div class="toast" [class]="'toast ' + t.kind" (click)="toasts.dismiss(t.id)">{{ t.message }}</div>
+  }
+</div>

@@ -1,0 +1,125 @@
+// Fonte de verdade da descarga: produtos (embalagem de compra), aliases
+// aprendidos, lojas (CNPJ → apelido) e notas com itens.
+//
+// Nomes de coluna em snake_case no banco (@map) e camelCase no cliente.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Uma linha por embalagem de compra: o mesmo produto pode ter CX/24 e UN/1.
+model Product {
+  id              Int    @id @default(autoincrement())
+  ean             String?
+  code            String?
+  name            String
+  /// Tokens ordenados sem acento (ver domain/names.ts); a cascata busca por ele.
+  nameNorm        String @map("name_norm")
+  packaging       String @default("CX")
+  unitsPerPackage Float  @default(1) @map("units_per_package")
+
+  @@unique([code, packaging, unitsPerPackage])
+  @@index([ean])
+  @@index([code])
+  @@index([name])
+  @@index([nameNorm])
+  @@map("products")
+}
+
+/// De-para aprendido pela cascata: EAN ou nome normalizado → código do produto.
+model ProductAlias {
+  id        Int      @id @default(autoincrement())
+  /// 'ean' | 'name'
+  kind      String   @db.VarChar(10)
+  key       String
+  code      String
+  source    String?  @db.VarChar(30)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([kind, key])
+  @@index([code])
+  @@map("product_aliases")
+}
+
+/// Loja destinatária: o CNPJ vem da nota, o apelido é cadastro.
+model Store {
+  id        Int      @id @default(autoincrement())
+  cnpj      String   @unique @db.VarChar(14)
+  nickname  String   @db.VarChar(60)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("stores")
+}
+
+/// Nota fiscal com o snapshot do recálculo de descarga.
+model Invoice {
+  id             Int           @id @default(autoincrement())
+  accessKey      String        @unique @map("access_key") @db.VarChar(44)
+  number         String        @db.VarChar(9)
+  series         String        @default("1") @db.VarChar(3)
+  issueDate      DateTime      @map("issue_date") @db.Date
+  issuerCnpj     String        @map("issuer_cnpj") @db.VarChar(14)
+  issuerName     String        @map("issuer_name")
+  recipientCnpj  String        @map("recipient_cnpj") @db.VarChar(14)
+  recipientName  String        @map("recipient_name")
+  totalValue     Float         @default(0) @map("total_value")
+  productsValue  Float         @default(0) @map("products_value")
+  carrierVolumes Int           @default(0) @map("carrier_volumes")
+  species        String        @default("UN") @db.VarChar(20)
+  grossWeight    Float         @default(0) @map("gross_weight")
+  netWeight      Float         @default(0) @map("net_weight")
+  /// Snapshot do recálculo.
+  volumes        Int           @default(0)
+  itemVolumes    Int           @default(0) @map("item_volumes")
+  itemsWeight    Float         @default(0) @map("items_weight")
+  volumeMismatch Boolean       @default(false) @map("volume_mismatch")
+  /// 'manual' | 'upload' | 'ingestion'
+  source         String        @db.VarChar(10)
+  /// 'pending' | 'confirmed' | 'reconciled' | 'discarded'
+  status         String        @db.VarChar(15)
+  note           String?       @db.VarChar(500)
+  createdBy      String?       @map("created_by")
+  updatedBy      String?       @map("updated_by")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  reconciledAt   DateTime?     @map("reconciled_at")
+  items          InvoiceItem[]
+
+  @@index([issueDate])
+  @@index([recipientCnpj, issueDate])
+  @@index([issuerCnpj])
+  @@index([source, status])
+  @@index([number])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id            Int     @id @default(autoincrement())
+  invoiceId     Int     @map("invoice_id")
+  invoice       Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  seq           Int
+  ean           String? @db.VarChar(14)
+  code          String?
+  description   String
+  unit          String  @db.VarChar(6)
+  quantity      Float
+  value         Float   @default(0)
+  /// Saída da cascata de volumes.
+  volumes       Int?
+  packagingUsed String? @map("packaging_used") @db.VarChar(10)
+  status        String? @db.VarChar(20)
+
+  @@unique([invoiceId, seq])
+  @@index([invoiceId])
+  @@index([ean])
+  @@index([code])
+  @@map("invoice_items")
+}

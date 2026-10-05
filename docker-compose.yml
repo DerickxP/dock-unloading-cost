@@ -1,0 +1,50 @@
+# Desenvolvimento (só o banco):  docker compose up -d postgres
+# Stack completa (banco + API + front em http://localhost:8080):
+#                                docker compose up -d --build
+#
+# Os valores abaixo são de desenvolvimento. Em produção, defina
+# POSTGRES_PASSWORD e ADMIN_API_KEY num .env ao lado deste arquivo.
+name: dock-unloading
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dock}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dock}
+      POSTGRES_DB: ${POSTGRES_DB:-dock}
+    ports:
+      - '5434:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U dock -d dock']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dock}:${POSTGRES_PASSWORD:-dock}@postgres:5432/${POSTGRES_DB:-dock}?schema=public
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-dev-admin-key}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - '3000:3000'
+
+  web:
+    build: ./web
+    restart: unless-stopped
+    depends_on:
+      - api
+    # http://localhost:8080 ; o nginx faz o proxy de /api para a API.
+    ports:
+      - '8080:80'
+
+volumes:
+  pgdata:

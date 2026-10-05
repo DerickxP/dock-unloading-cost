@@ -1,0 +1,22 @@
+.filters {
+  margin-top: 0.8rem;
+  align-items: flex-end;
+}
+.table-card {
+  padding: 0;
+  overflow: auto;
+}
+.table-card .pager {
+  padding: 0.6rem 0.8rem;
+}
+.compute-bar {
+  position: sticky;
+  bottom: 0.6rem;
+}
+.compute-bar .field {
+  min-width: 9rem;
+}
+.warn-text {
+  color: var(--warn);
+  font-weight: 600;
+}

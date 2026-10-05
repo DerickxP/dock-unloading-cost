@@ -1,0 +1,139 @@
+<section class="card">
+  <div class="row between">
+    <div>
+      <h1>Cadastro de produtos</h1>
+      <p class="muted" style="margin: 0">Uma linha por embalagem de compra. É por aqui que 48 UN viram 2 caixas.</p>
+    </div>
+    <div class="row">
+      <input
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keyup.enter)="load(1)"
+        placeholder="nome, tokens, EAN ou código"
+        style="width: 18rem"
+      />
+      <button (click)="load(1)">Buscar</button>
+      <app-file-button
+        accept=".xlsx,.csv,.txt"
+        [disabled]="!settings.isAdmin || busy()"
+        (files)="importSpreadsheet($event)"
+      >
+        ⬆ Importar planilha do ERP
+      </app-file-button>
+      <button class="primary" [disabled]="!settings.isAdmin" (click)="openNew()">＋ Nova embalagem</button>
+    </div>
+  </div>
+  @if (!settings.isAdmin) {
+    <div class="alert" style="margin-top: 0.6rem">
+      Cadastro em modo leitura: informe a chave de administração no topo para editar ou importar.
+    </div>
+  }
+</section>
+
+<section class="card" style="padding: 0; overflow: auto">
+  @if (loading()) {
+    <div class="empty">Carregando…</div>
+  } @else if (page().items.length === 0) {
+    <div class="empty">Nenhum produto. Importe a planilha do ERP ou cadastre a primeira embalagem.</div>
+  } @else {
+    <table class="data">
+      <thead>
+        <tr>
+          <th class="sortable" (click)="sortBy('code')">Código{{ sortMark('code') }}</th>
+          <th class="sortable" (click)="sortBy('ean')">EAN{{ sortMark('ean') }}</th>
+          <th class="sortable" (click)="sortBy('name')">Nome{{ sortMark('name') }}</th>
+          <th>Embalagem</th>
+          <th class="num">Qtd por embalagem</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of page().items; track p.id) {
+          <tr>
+            <td class="mono">{{ p.code ?? '' }}</td>
+            <td class="mono">{{ p.ean ?? '' }}</td>
+            <td>{{ p.name }}</td>
+            <td>
+              <span class="badge info">{{ p.packaging }}</span>
+            </td>
+            <td class="num">{{ num(p.unitsPerPackage, p.unitsPerPackage % 1 ? 3 : 0) }}</td>
+            <td class="right nowrap">
+              <button class="small" [disabled]="!settings.isAdmin" (click)="openEdit(p)">editar</button>
+              <button class="small danger" [disabled]="!settings.isAdmin" (click)="remove(p)">remover</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <div style="padding: 0 0.8rem 0.6rem">
+      <app-pager [page]="page().page" [perPage]="page().perPage" [total]="page().total" (pageChange)="load($event)" />
+    </div>
+  }
+</section>
+
+<app-dialog #formDialog [title]="editingId() === null ? 'Nova embalagem de compra' : 'Editar embalagem'">
+  <div class="row">
+    <label class="field"
+      >Código no fornecedor<input [ngModel]="draft().code" (ngModelChange)="setDraft('code', $event)"
+    /></label>
+    <label class="field"
+      >EAN<input [ngModel]="draft().ean" (ngModelChange)="setDraft('ean', $event)" inputmode="numeric"
+    /></label>
+  </div>
+  <label class="field"
+    >Nome do produto<input [ngModel]="draft().name" (ngModelChange)="setDraft('name', $event)"
+  /></label>
+  <div class="row">
+    <label class="field"
+      >Embalagem (CX, FD, PCT…)<input
+        [ngModel]="draft().packaging"
+        (ngModelChange)="setDraft('packaging', $event)"
+        style="width: 8rem"
+    /></label>
+    <label class="field"
+      >Unidades por embalagem<input
+        [ngModel]="draft().unitsPerPackage"
+        (ngModelChange)="setDraft('unitsPerPackage', $event)"
+        inputmode="decimal"
+        style="width: 10rem"
+    /></label>
+  </div>
+  <p class="muted">
+    O mesmo código pode ter mais de uma embalagem (CX/24 e UN/1); a cascata escolhe a maior embalagem física.
+  </p>
+  @if (formError(); as err) {
+    <div class="alert danger">{{ err }}</div>
+  }
+  <div footer>
+    <button (click)="formDialog.close()">Cancelar</button>
+    <button class="primary" [disabled]="busy()" (click)="save()">Salvar</button>
+  </div>
+</app-dialog>
+
+<app-dialog #reportDialog title="Importação da planilha">
+  @if (report(); as r) {
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Linhas lidas</div>
+        <div class="value">{{ r.rows }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Criadas</div>
+        <div class="value">{{ r.created }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Atualizadas</div>
+        <div class="value">{{ r.updated }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Puladas sem nome</div>
+        <div class="value">{{ r.skipped }}</div>
+      </div>
+    </div>
+    <p class="muted" style="margin-top: 0.8rem">Colunas reconhecidas: {{ columnsOf(r) }}</p>
+    @for (w of r.warnings; track $index) {
+      <div class="alert warn">⚠ {{ w }}</div>
+    }
+  }
+  <div footer><button class="primary" (click)="reportDialog.close()">Fechar</button></div>
+</app-dialog>
