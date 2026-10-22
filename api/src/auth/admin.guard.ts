@@ -2,8 +2,8 @@
  * Rotas de administração (cadastro de produtos e lojas, descarte de nota)
  * exigem o header `x-admin-key` igual a ADMIN_API_KEY.
  *
- * É um guard deliberadamente simples: o sistema original autentica por SSO da
- * plataforma corporativa e deriva o perfil da sessão. Aqui o ponto de extensão
+ * É um guard deliberadamente simples: em um ambiente corporativo a identidade
+ * viria de um SSO, com o perfil derivado da sessão. Aqui o ponto de extensão
  * é o mesmo (um CanActivate por rota), trocando só a origem da identidade.
  */
 import {

@@ -13,9 +13,9 @@
 Sistema (API NestJS + front Angular) que calcula quanto o centro de
 distribuição paga pela descarga de cada carga recebida, rateado por loja
 destinatária, a partir dos XMLs de NF-e, dos DANFEs em PDF e do cadastro de
-embalagens de compra. Reprodução, com dados sintéticos, da arquitetura de um
-sistema que opera em uma rede varejista; nenhum dado real está neste
-repositório.
+embalagens de compra. Projeto de portfólio sobre um cenário hipotético de
+uma rede varejista fictícia; todos os dados são sintéticos e gerados pelo
+próprio projeto.
 
 ![Tela de notas](docs/notas.png)
 
@@ -176,8 +176,8 @@ recálculo de uma nota roda igual em produção, nos testes e na demonstração.
   correspondente, e os testes do PDF usam PDFs de verdade gerados na hora.
 - **Front fino.** As regras ficam na API; o front formata, seleciona e chama.
   Vírgula decimal é aceita no formulário e convertida antes de enviar.
-- **Administração por chave, não por sessão.** O sistema original autentica no
-  SSO da plataforma corporativa e deriva o perfil da sessão. Aqui o mesmo ponto
+- **Administração por chave, não por sessão.** Em um ambiente corporativo a
+  identidade viria de um SSO, com o perfil derivado da sessão. Aqui o mesmo ponto
   de extensão (um `CanActivate` por rota) usa o header `x-admin-key`; trocar a
   origem da identidade não toca os controllers.
 
@@ -386,18 +386,18 @@ npm test            # vitest, uma vez
 
 ## Limitações e evolução
 
-- **Sem SSO.** O sistema original autentica no SSO da plataforma corporativa e
-  deriva o perfil da sessão. Aqui a identidade vai por cabeçalho (operador e
+- **Sem SSO.** Em um ambiente corporativo a identidade viria de um SSO, com o
+  perfil derivado da sessão. Aqui a identidade vai por cabeçalho (operador e
   chave de administração); o ponto de extensão nos controllers é o mesmo.
-- **Sem ingestão automática.** No original ela dependia de uma view do ERP
-  ainda em definição. Um job que lê de uma fila ou de uma view deve escrever
+- **Sem ingestão automática.** Em um cenário real ela viria de uma view ou
+  integração com o ERP. Um job que lê de uma fila ou de uma view deve escrever
   pelo mesmo `ImportService`.
 - **O DANFE lido é o simplificado deste projeto.** As regras de extração
   (âncora na chave, validação cruzada, provas aritméticas, rejeição do
-  ambíguo) são as do original; as expressões regulares do layout ficam em um
+  ambíguo) valem para qualquer layout; as expressões regulares do layout ficam em um
   único módulo (`domain/danfe-text.ts`) para trocar quando o emissor muda.
 - **Float no banco.** Valores e pesos são `Float` com arredondamento
-  explícito no domínio, como no original. `Decimal` seria a evolução segura.
+  explícito no domínio. `Decimal` seria a evolução segura.
 
 ## Licença
 
