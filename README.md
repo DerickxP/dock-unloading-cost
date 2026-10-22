@@ -2,6 +2,14 @@
 
 # Custo de descarga de NF-e no centro de distribuição
 
+[![CI](https://github.com/DerickxP/dock-unloading-cost/actions/workflows/ci.yml/badge.svg)](https://github.com/DerickxP/dock-unloading-cost/actions/workflows/ci.yml)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white)
+![Angular](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 Sistema (API NestJS + front Angular) que calcula quanto o centro de
 distribuição paga pela descarga de cada carga recebida, rateado por loja
 destinatária, a partir dos XMLs de NF-e, dos DANFEs em PDF e do cadastro de
